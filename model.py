@@ -1,9 +1,12 @@
 import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
 
 def inference(images, batch_size, n_classes):
     "return output tensor with computed logits, float, [batch_size, channels]"
     '''
-        args:
+        :parameter:
             image: image_batch 4D tensor[batch_size, width, height, 3], dtype = tf.float32
     '''
     #conv1 shape = [kernal size, kernal size, kernal numbers]
@@ -28,6 +31,9 @@ def inference(images, batch_size, n_classes):
                                name = 'pooling1')
         norm1 = tf.nn.lrn(pool1, depth_radius = 4, bias = 1.0, alpha = 0.001/9.0,
                           beta = 0.75, name = 'norm1')
+    #dropout1
+    with tf.variable_scope("dropout1") as scope:
+        dpout1 = tf.nn.dropout(norm1, 0.75)
 
     #conv2
     with tf.variable_scope('conv2') as scope:
@@ -39,7 +45,7 @@ def inference(images, batch_size, n_classes):
                                  shape=[16],
                                  dtype=tf.float32,
                                  initializer=tf.constant_initializer(0.1))
-        conv = tf.nn.conv2d(norm1, weights, strides=[1, 1, 1, 1], padding='SAME')
+        conv = tf.nn.conv2d(dpout1, weights, strides=[1, 1, 1, 1], padding='SAME')
         pre_activation = tf.nn.bias_add(conv, biases)
         conv2 = tf.nn.relu(pre_activation, name='conv2')
 
@@ -50,9 +56,13 @@ def inference(images, batch_size, n_classes):
         pool2 = tf.nn.max_pool(norm2, ksize = [1, 3, 3, 1], strides = [1, 1, 1, 1],
                                padding = 'SAME', name = 'pooling2')
 
+    # dropout1
+    with tf.variable_scope("dropout2") as scope:
+        dpout2 = tf.nn.dropout(norm1, 0.5)
+
     #local3
     with tf.variable_scope('local3') as scope:
-        reshape = tf.reshape(pool2, shape = [batch_size, -1])
+        reshape = tf.reshape(dpout2, shape = [batch_size, -1])
         dim = reshape.get_shape()[1].value
         weights = tf.get_variable('weights',
                                   shape=[dim,128],
@@ -93,9 +103,9 @@ def inference(images, batch_size, n_classes):
 def losses(logits, labels):
     " return loss tensor of float type"
     '''
-        args:
-            logits: logits tensor [batch_size, n_classes], dtype = float
-            labels： label tensor, [batch_size],  dtype = tf.int32 
+        :parameter:
+            logits: logits tensor with [batch_size, n_classes], dtype = float
+            labels： label tensor with [batch_size],  dtype = tf.int32 
     '''
     with tf.variable_scope('loss') as scope:
         cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits\
@@ -107,8 +117,8 @@ def losses(logits, labels):
 def training(loss, learning_rate):
     "return train_op: op fot training"
     '''
-        args:
-            loss: loss tensor from losses()
+        :parameter:
+            loss: loss from losses()
     '''
     with tf.name_scope('optimizer'):
         optimizer = tf.train.AdamOptimizer(learning_rate= learning_rate)
@@ -119,7 +129,7 @@ def training(loss, learning_rate):
 def evaluation(logits, labels):
     "return a scaler int32 tensor with the number of examples (out of batch_size) that were predicted correctly"
     '''
-        args:
+        :parameter:
             logits: logits tensor [batch_size, n_classes], dtype = float
             labels： label tensor, [batch_size],  dtype = tf.int32 in range [0, n_classes]
             

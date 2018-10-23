@@ -1,9 +1,14 @@
 import os
 import numpy as np
 import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
+# import matplotlib.pyplot as plt
+
 import input_data
 import model
-# import matplotlib.pyplot as plt
+
 
 N_CLASSES = 2
 IMG_W = 200
@@ -11,8 +16,9 @@ IMG_H = 200
 BATCH_SIZE = 16
 CAPACITY = 200
 MAX_STEP = 3000
-learning_rate = 0.0001
+learning_rate = 1e-4
 
+#data & logs directory
 train_dir = 'D:/program/mini_project2/venv/data/train/'
 test_dir = 'D:/program/mini_project2/venv/data/test/'
 logs_train_dir = 'D:/program/mini_project2/venv/logs/train/'
@@ -61,80 +67,6 @@ def run_training():
 
     coord.join(threads)
     sess.close()
-
-#%% Evaluate one image when training, comment the following codes.
-
-# from PIL import Image
-# import matplotlib.pyplot as plt
-# train_dir = 'D:/program/mini_project2/venv/data/train/'
-# logs_train_dir = 'D:/program/mini_project2/venv/logs/train/'
-#
-# def get_one_image(file_dir):
-#     """
-#     Randomly pick one image from test data
-#     Return: ndarray
-#     """
-#
-#     test =[]
-#     for file in os.listdir(file_dir):
-#         test.append(file_dir + file)
-#     print('There are %d test pictures\n' %(len(test)))
-#
-#     n = len(test)
-#     ind = np.random.randint(0, n)
-#     print(ind)
-#     img_test = test[ind]
-#
-#     image = Image.open(img_test)
-#     plt.imshow(image)
-#     # plt.show()
-#     image = image.resize([208, 208])
-#     image = np.array(image)
-#     return image
-#
-# test_dir = 'D:/program/mini_project2/venv/data/test/'
-# def test_one_image():
-#     """
-#     Test one image with the saved models and parameters
-#     """
-#
-#     test_image = get_one_image(test_dir)
-#
-#     with tf.Graph().as_default():
-#         BATCH_SIZE = 1
-#         N_CLASSES = 2
-#
-#         image = tf.cast(test_image, tf.float32)
-#         image = tf.image.per_image_standardization(image)
-#         image = tf.reshape(image, [1, 208, 208, 3])
-#         logit = model.inference(image, BATCH_SIZE, N_CLASSES)
-#
-#         logit = tf.nn.softmax(logit)
-#
-#         x = tf.placeholder(tf.float32, shape=[208, 208, 3])
-#
-#         saver = tf.train.Saver()
-#
-#         with tf.Session() as sess:
-#
-#             print("Reading checkpoints...")
-#             ckpt = tf.train.get_checkpoint_state(logs_train_dir)
-#             if ckpt and ckpt.model_checkpoint_path:
-#                 global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
-#                 saver.restore(sess, ckpt.model_checkpoint_path)
-#                 print('Loading success, global_step is %s' % global_step)
-#             else:
-#                 print('No checkpoint file found')
-#
-#             prediction = sess.run(logit, feed_dict={x: test_image})
-#             max_index = np.argmax(prediction)
-#             if max_index==0:
-#                 print('This is a daisy with possibility %.6f' %prediction[:, 0])
-#             else:
-#                 print('This is a rose with possibility %.6f' %prediction[:, 1])
-#
-#         plt.show()
-
 
 def evaluate_all_image():
     '''
